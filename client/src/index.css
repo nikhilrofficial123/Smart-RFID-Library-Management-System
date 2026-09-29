@@ -1,0 +1,276 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white;
+  }
+}
+
+/* Glassmorphism custom components */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow: 0 10px 30px -10px rgba(139, 92, 246, 0.15);
+}
+
+/* Pulsing scanner animations */
+@keyframes rfid-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 20px rgba(139, 92, 246, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+  }
+}
+
+.scanner-glow {
+  animation: rfid-pulse 2s infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.6);
+}
+
+/* Light Theme Variables and High-Contrast Overrides */
+html.light-mode {
+  color-scheme: light;
+}
+
+html.light-mode body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Global Headings and Paragraphs */
+html.light-mode h1,
+html.light-mode h2,
+html.light-mode h3,
+html.light-mode h4,
+html.light-mode h5,
+html.light-mode h6 {
+  color: #0f172a !important;
+}
+
+html.light-mode p,
+html.light-mode span,
+html.light-mode label,
+html.light-mode td,
+html.light-mode th {
+  color: #1e293b;
+}
+
+/* Override text-white to dark slate EXCEPT inside solid brand buttons and badges */
+html.light-mode .text-white {
+  color: #0f172a !important;
+}
+
+html.light-mode .bg-brand-600 .text-white,
+html.light-mode .bg-brand-500 .text-white,
+html.light-mode .bg-brand-700 .text-white,
+html.light-mode button.bg-brand-600,
+html.light-mode button.bg-brand-500,
+html.light-mode button.bg-brand-700,
+html.light-mode button.bg-rose-600,
+html.light-mode button.bg-emerald-600,
+html.light-mode button.bg-indigo-600,
+html.light-mode .bg-brand-600,
+html.light-mode .bg-brand-500,
+html.light-mode .bg-rose-600,
+html.light-mode .bg-emerald-600,
+html.light-mode .bg-indigo-600 {
+  color: #ffffff !important;
+}
+
+html.light-mode button.bg-brand-600 *,
+html.light-mode button.bg-brand-500 *,
+html.light-mode button.bg-brand-700 * {
+  color: #ffffff !important;
+}
+
+/* Container backgrounds */
+html.light-mode .bg-slate-950,
+html.light-mode .bg-slate-950\/40,
+html.light-mode .bg-slate-950\/60,
+html.light-mode .bg-slate-950\/80 {
+  background-color: #f8fafc !important;
+}
+
+html.light-mode .bg-slate-900,
+html.light-mode .bg-slate-900\/40,
+html.light-mode .bg-slate-900\/60,
+html.light-mode .bg-slate-900\/80,
+html.light-mode .bg-slate-900\/90 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light-mode .bg-slate-800,
+html.light-mode .bg-slate-800\/40,
+html.light-mode .bg-slate-800\/60,
+html.light-mode .bg-slate-800\/80 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Border overrides */
+html.light-mode .border-slate-800,
+html.light-mode .border-slate-800\/40,
+html.light-mode .border-slate-800\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light-mode .border-slate-700,
+html.light-mode .border-slate-700\/40,
+html.light-mode .border-slate-700\/60 {
+  border-color: #cbd5e1 !important;
+}
+
+/* Text color helper overrides */
+html.light-mode .text-slate-100,
+html.light-mode .text-slate-200,
+html.light-mode .text-slate-300 {
+  color: #0f172a !important;
+}
+
+html.light-mode .text-slate-400 {
+  color: #334155 !important;
+}
+
+html.light-mode .text-slate-500 {
+  color: #475569 !important;
+}
+
+html.light-mode .text-slate-600 {
+  color: #64748b !important;
+}
+
+/* Header and Sidebar */
+html.light-mode header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html.light-mode aside {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+/* Glass Panels and Cards */
+html.light-mode .glass-panel {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light-mode .glass-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+
+html.light-mode .glass-card:hover {
+  background: #ffffff !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.15) !important;
+}
+
+/* Form Inputs & Selects */
+html.light-mode input,
+html.light-mode select,
+html.light-mode textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light-mode input::placeholder,
+html.light-mode select::placeholder,
+html.light-mode textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Tables */
+html.light-mode table {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.light-mode th {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html.light-mode td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+html.light-mode tr:hover td {
+  background-color: #f8fafc !important;
+}
+
+/* Recharts Charts Text & Tooltips */
+html.light-mode .recharts-text,
+html.light-mode .recharts-cartesian-axis-tick-value {
+  fill: #475569 !important;
+}
+
+html.light-mode .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Scrollbars */
+html.light-mode ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html.light-mode ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
