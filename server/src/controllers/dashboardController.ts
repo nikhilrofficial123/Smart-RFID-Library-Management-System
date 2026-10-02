@@ -68,14 +68,10 @@ export async function getDashboardStats(req: AuthenticatedRequest, res: Response
       let issues = issueCountRes[0]?.count || 0;
       let returns = returnCountRes[0]?.count || 0;
 
-      // Provide realistic default curve if database checkouts for the week are empty
-      // to make the dashboard visually stunning for grading/project demonstration.
-      if (issues === 0 && returns === 0) {
-        const mockIssuesCurve = [2, 5, 3, 6, 4, 7, todayIssues];
-        const mockReturnsCurve = [1, 3, 4, 2, 5, 3, todayReturns];
-        issues = mockIssuesCurve[6 - i];
-        returns = mockReturnsCurve[6 - i];
-      }
+      // Let the actual database metrics drive the dashboard. 
+      // Ensure values are numbers
+      issues = Number(issues);
+      returns = Number(returns);
 
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       weeklyData.push({
