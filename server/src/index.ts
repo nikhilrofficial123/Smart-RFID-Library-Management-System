@@ -12,7 +12,9 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middlewares
-app.use(cors({ origin: '*' })); // Enable all CORS for simple project access
+const corsOrigin = process.env.CORS_ORIGIN || '*';
+app.use(cors({ origin: corsOrigin })); // Set CORS_ORIGIN env var in production
+
 app.use(express.json({ limit: '10mb' })); // Support uploads in JSON bodies
 
 // Register Router

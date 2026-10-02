@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.getItem('lib_user') ? JSON.parse(localStorage.getItem('lib_user')!) : null
   );
 
-  const apiUrl = 'http://localhost:5001/api';
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
   const login = (newToken: string, newUser: User) => {
     localStorage.setItem('lib_token', newToken);

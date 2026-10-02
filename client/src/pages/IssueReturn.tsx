@@ -151,7 +151,7 @@ export const IssueReturn: React.FC = () => {
 
       setSuccess(`Book "${scannedBook.title}" successfully issued to "${scannedStudent.name}"!`);
       clearScanned();
-      fetchActiveTransactions();
+      fetchDropdownData();
     } catch (err: any) {
       setError(err.message);
     }
@@ -182,7 +182,7 @@ export const IssueReturn: React.FC = () => {
       setSuccess(`Book returned successfully!`);
       setReceipt(data.receipt);
       clearScanned();
-      fetchActiveTransactions();
+      fetchDropdownData();
     } catch (err: any) {
       setError(err.message);
     }
@@ -210,7 +210,7 @@ export const IssueReturn: React.FC = () => {
       setSuccess(`Book returned and dues cleared successfully!`);
       setReceipt(data.receipt);
       clearScanned();
-      fetchActiveTransactions();
+      fetchDropdownData();
     } catch (err: any) {
       setError(err.message);
     }

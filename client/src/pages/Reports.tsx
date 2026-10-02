@@ -55,7 +55,7 @@ export const Reports: React.FC = () => {
         a.remove();
         window.URL.revokeObjectURL(url);
       })
-      .catch(err => {
+      .catch(_err => {
         alert('Failed to generate and download PDF report. Make sure server is running.');
       });
   };

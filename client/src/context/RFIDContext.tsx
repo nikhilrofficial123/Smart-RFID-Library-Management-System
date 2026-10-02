@@ -41,7 +41,7 @@ export const RFIDProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Connect WebSockets
   useEffect(() => {
     const connectWS = () => {
-      const wsUrl = 'ws://localhost:5001/client';
+      const wsUrl = (import.meta.env.VITE_WS_URL || 'ws://localhost:5001') + '/client';
       console.log('Client connecting to WebSocket gateway:', wsUrl);
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
