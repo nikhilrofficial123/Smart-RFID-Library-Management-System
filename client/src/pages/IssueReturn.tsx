@@ -305,8 +305,8 @@ export const IssueReturn: React.FC = () => {
               <div className="flex flex-col md:flex-row gap-6 p-4 bg-slate-950/40 border border-slate-850 rounded-xl animate-in fade-in duration-200">
                 <img 
                   src={scannedStudent.photo} 
-                  alt="Student Face" 
-                  className="w-24 h-24 object-cover rounded-xl border border-slate-800 self-center"
+                  alt="Student Profile" 
+                  className="w-20 h-24 object-cover rounded-xl border border-slate-800 shadow-md shrink-0 self-center"
                   onError={(e: any) => { e.target.src = 'https://api.dicebear.com/7.x/avataaars/svg' }}
                 />
                 <div className="space-y-2 text-xs flex-1">
@@ -393,7 +393,7 @@ export const IssueReturn: React.FC = () => {
                 <img 
                   src={scannedBook.image || '/assets/VERBS.jpg'} 
                   alt="Book Cover" 
-                  className="w-18 h-26 object-cover rounded shadow-md border border-slate-850 self-center"
+                  className="w-20 h-24 object-cover rounded-xl border border-slate-800 shadow-md shrink-0 self-center"
                   onError={(e: any) => { e.target.src = '/assets/VERBS.jpg' }}
                 />
                 <div className="space-y-2 text-xs flex-1">
