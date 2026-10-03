@@ -23,6 +23,8 @@ console.log('📶 RFID Reader Middleware Gateway Starting...');
 console.log(`🔌 Target server WebSocket: ${SERVER_WS_URL}`);
 console.log('==================================================');
 
+let isRc522ChipHealthy = false;
+
 // Send hardware connection status to Server
 function sendHardwareStatus(connected: boolean) {
   isHardwareConnected = connected;
@@ -30,6 +32,18 @@ function sendHardwareStatus(connected: boolean) {
     ws.send(JSON.stringify({ type: 'hardware-status', isHardwareConnected: connected }));
   }
 }
+
+// Continuous Heartbeat & Status Verification Loop (every 2.5 seconds)
+setInterval(() => {
+  if (activePort && activePort.isOpen) {
+    try {
+      activePort.write('CHECK\n');
+    } catch (_) {}
+  } else {
+    isRc522ChipHealthy = false;
+    sendHardwareStatus(false);
+  }
+}, 2500);
 
 // Establish WebSocket Connection with Auto Reconnection
 function connectWebSocket() {
@@ -43,13 +57,13 @@ function connectWebSocket() {
       reconnectTimer = null;
     }
     // Send current hardware status upon WS connection
-    sendHardwareStatus(isHardwareConnected);
+    sendHardwareStatus(Boolean(activePort && activePort.isOpen));
   });
 
   ws.on('close', () => {
-    console.log('❌ Backend connection lost. Attempting reconnection in 5 seconds...');
+    console.log('❌ Backend connection lost. Attempting reconnection in 2.5 seconds...');
     if (!reconnectTimer) {
-      reconnectTimer = setInterval(connectWebSocket, 5000);
+      reconnectTimer = setInterval(connectWebSocket, 2500);
     }
   });
 
@@ -61,15 +75,35 @@ function connectWebSocket() {
 connectWebSocket();
 
 // Helper to send scan to Server
-function sendRfidScan(uid: string) {
-  const cleanUid = uid.trim();
+function sendRfidScan(rawInput: string) {
+  let cleanUid = rawInput.trim();
   if (!cleanUid) return;
+
+  // Handle header text lines from standard MFRC522 dump sketches as proof of connection
+  if (cleanUid.includes('MIFARE') || cleanUid.includes('Read personal data') || cleanUid.includes('Firmware Version') || cleanUid.includes('PICC')) {
+    console.log(`ℹ️ Hardware Connection Active: ${cleanUid}`);
+    isRc522ChipHealthy = true;
+    sendHardwareStatus(true);
+    return;
+  }
+
+  // Handle 'Card UID: 77 92 13 AB' format
+  if (cleanUid.includes('Card UID:')) {
+    cleanUid = cleanUid.split('Card UID:')[1].trim();
+  }
+
+  // Format hex UIDs (remove spaces e.g. "77 92 13 AB" -> "779213AB")
+  if (!cleanUid.includes('_')) {
+    cleanUid = cleanUid.replace(/\s+/g, '').toUpperCase();
+  }
+
+  if (cleanUid.length < 4) return;
 
   console.log(`📡 Scanned RFID Tag UID: [ ${cleanUid} ]`);
   
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'scan', uid: cleanUid }));
-    console.log(`   Sent to backend.`);
+    console.log(`   Sent to backend successfully.`);
   } else {
     console.warn(`   ⚠️  Backend disconnected. Unable to send UID: ${cleanUid}`);
   }
@@ -129,13 +163,29 @@ async function tryConnectSerial() {
           return;
         }
 
-        console.log(`✅ Serial Port ${targetPath} opened successfully!`);
+        console.log(`✅ Serial Port ${targetPath} opened. Verifying RC522 SPI IC...`);
         activePort = port;
-        sendHardwareStatus(true);
         isConnectingSerial = false;
 
         parser.on('data', (data: string) => {
-          sendRfidScan(data);
+          const line = data.trim();
+          if (line.startsWith('STATUS:RC522_OK')) {
+            if (!isRc522ChipHealthy) {
+              console.log(`✅ RC522 RFID IC verified healthy over SPI! (${line})`);
+            }
+            isRc522ChipHealthy = true;
+            sendHardwareStatus(true);
+          } else if (line.startsWith('STATUS:RC522_ERROR')) {
+            if (isRc522ChipHealthy || isHardwareConnected) {
+              console.warn('⚠️ RC522 SPI IC Error: Module missing, loose SPI wiring, or power issue.');
+            }
+            isRc522ChipHealthy = false;
+            sendHardwareStatus(false);
+          } else if (line) {
+            isRc522ChipHealthy = true;
+            sendHardwareStatus(true);
+            sendRfidScan(line);
+          }
         });
 
         port.on('error', (err) => {

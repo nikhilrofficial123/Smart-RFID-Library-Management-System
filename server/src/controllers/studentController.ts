@@ -127,19 +127,28 @@ export async function updateStudent(req: AuthenticatedRequest, res: Response) {
       if (checkEmail.length > 0) return res.status(400).json({ error: 'Email already in use' });
     }
 
-    // Handle RFID swap
-    if (rfid_uid && rfid_uid !== currentStudent.rfid_uid) {
-      // Free old card if any
-      if (currentStudent.rfid_uid) {
-        await db.query('DELETE FROM RFIDTags WHERE uid = ?', [currentStudent.rfid_uid]);
-      }
-      
-      const checkRfid = await db.query('SELECT * FROM RFIDTags WHERE uid = ?', [rfid_uid]);
-      if (checkRfid.length > 0 && checkRfid[0].linked_id !== null) {
-        return res.status(400).json({ error: 'New RFID tag is already linked to another user/book' });
-      }
+    // Handle RFID swap or clear
+    let finalRfidUid = currentStudent.rfid_uid;
+    if (rfid_uid !== undefined) {
+      const cleanRfid = (typeof rfid_uid === 'string') ? rfid_uid.trim() : null;
+      if (!cleanRfid || req.body.clear_rfid === true) {
+        if (currentStudent.rfid_uid) {
+          await db.query('DELETE FROM RFIDTags WHERE uid = ? OR (type = "Student" AND linked_id = ?)', [currentStudent.rfid_uid, id]);
+        }
+        finalRfidUid = null;
+      } else if (cleanRfid !== currentStudent.rfid_uid) {
+        if (currentStudent.rfid_uid) {
+          await db.query('DELETE FROM RFIDTags WHERE uid = ? OR (type = "Student" AND linked_id = ?)', [currentStudent.rfid_uid, id]);
+        }
+        
+        const checkRfid = await db.query('SELECT * FROM RFIDTags WHERE uid = ?', [cleanRfid]);
+        if (checkRfid.length > 0 && checkRfid[0].linked_id !== null && checkRfid[0].linked_id !== parseInt(id)) {
+          return res.status(400).json({ error: 'New RFID tag is already linked to another user/book' });
+        }
 
-      await db.query('INSERT OR REPLACE INTO RFIDTags (uid, type, linked_id, status) VALUES (?, "Student", ?, "Active")', [rfid_uid, id]);
+        await db.query('INSERT OR REPLACE INTO RFIDTags (uid, type, linked_id, status) VALUES (?, "Student", ?, "Active")', [cleanRfid, id]);
+        finalRfidUid = cleanRfid;
+      }
     }
 
     await db.query(
@@ -147,7 +156,7 @@ export async function updateStudent(req: AuthenticatedRequest, res: Response) {
       [
         roll_number || currentStudent.roll_number,
         name || currentStudent.name,
-        rfid_uid !== undefined ? rfid_uid : currentStudent.rfid_uid,
+        finalRfidUid,
         department || currentStudent.department,
         year || currentStudent.year,
         mobile || currentStudent.mobile,
@@ -171,6 +180,29 @@ export async function updateStudent(req: AuthenticatedRequest, res: Response) {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update student' });
+  }
+}
+
+// Unlink / Delete RFID card from student
+export async function unlinkStudentRFID(req: AuthenticatedRequest, res: Response) {
+  const { id } = req.params;
+  try {
+    const students = await db.query('SELECT rfid_uid, name FROM Students WHERE id = ?', [id]);
+    if (students.length === 0) return res.status(404).json({ error: 'Student not found' });
+
+    const currentRfid = students[0].rfid_uid;
+    if (currentRfid) {
+      await db.query('DELETE FROM RFIDTags WHERE uid = ? OR (type = "Student" AND linked_id = ?)', [currentRfid, id]);
+    } else {
+      await db.query('DELETE FROM RFIDTags WHERE type = "Student" AND linked_id = ?', [id]);
+    }
+
+    await db.query('UPDATE Students SET rfid_uid = NULL WHERE id = ?', [id]);
+    await logAudit(req.user?.id || 1, 'UNLINK_STUDENT_RFID', 'Students', parseInt(id), `Unlinked RFID card from student "${students[0].name}"`, req.ip);
+
+    res.json({ message: 'RFID card unlinked from student successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to unlink RFID card from student' });
   }
 }
 

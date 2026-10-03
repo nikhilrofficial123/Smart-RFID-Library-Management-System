@@ -38,19 +38,33 @@ export const RFIDProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLastScan(null);
   };
 
-  // Connect WebSockets
+  // Connect WebSockets with continuous pinging
   useEffect(() => {
+    let pingInterval: any = null;
+
     const connectWS = () => {
       const wsUrl = (import.meta.env.VITE_WS_URL || 'ws://localhost:5001') + '/client';
       console.log('Client connecting to WebSocket gateway:', wsUrl);
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
 
+      socket.onopen = () => {
+        // Continuous Ping interval every 3s
+        if (pingInterval) clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 3000);
+      };
+
       socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
           
           if (message.type === 'reader-status') {
+            setIsReaderOnline(message.online);
+          } else if (message.type === 'pong') {
             setIsReaderOnline(message.online);
           } else if (message.type === 'rfid-scan') {
             const scanResult: RFIDScan = {
@@ -71,9 +85,10 @@ export const RFIDProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       socket.onclose = () => {
-        console.log('WS Connection closed. Reconnecting in 5s...');
+        if (pingInterval) clearInterval(pingInterval);
+        console.log('WS Connection closed. Reconnecting in 2s...');
         setIsReaderOnline(false);
-        setTimeout(connectWS, 5000);
+        setTimeout(connectWS, 2000);
       };
 
       socket.onerror = (err) => {
@@ -84,6 +99,7 @@ export const RFIDProvider: React.FC<{ children: React.ReactNode }> = ({ children
     connectWS();
 
     return () => {
+      if (pingInterval) clearInterval(pingInterval);
       if (wsRef.current) {
         wsRef.current.close();
       }

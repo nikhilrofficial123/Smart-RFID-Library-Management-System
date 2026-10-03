@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRFID } from '../context/RFIDContext';
-import { Plus, Trash2, Radio, Info, KeyRound, Sparkles, Link2, BookOpen, X } from 'lucide-react';
+import { Plus, Trash2, Radio, Info, KeyRound, Sparkles, Link2, BookOpen, X, Edit2 } from 'lucide-react';
 
 export const RFIDTags: React.FC = () => {
   const { token, apiUrl, isAdmin, isLibrarian } = useAuth();
@@ -166,6 +166,84 @@ export const RFIDTags: React.FC = () => {
     }
   };
 
+  // Edit Tag Modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editUid, setEditUid] = useState('');
+  const [editType, setEditType] = useState<'Student' | 'Book'>('Book');
+  const [editError, setEditError] = useState('');
+  const [editSuccess, setEditSuccess] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Open Edit Tag modal
+  const openEditTagModal = (tag: any) => {
+    setSelectedTag(tag);
+    setEditUid(tag.uid);
+    setEditType(tag.type || 'Book');
+    setEditError('');
+    setEditSuccess('');
+    setShowEditModal(true);
+  };
+
+  // Submit Edit Tag UID
+  const handleEditTagSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError('');
+    setEditSuccess('');
+
+    if (!editUid.trim()) {
+      setEditError('Tag UID cannot be empty.');
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const res = await fetch(`${apiUrl}/rfid/tags/${selectedTag.uid}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          newUid: editUid.trim(),
+          type: editType
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update RFID tag UID');
+
+      setEditSuccess('RFID tag updated successfully!');
+      setTimeout(() => {
+        setShowEditModal(false);
+        setSelectedTag(null);
+        fetchTags();
+      }, 800);
+    } catch (err: any) {
+      setEditError(err.message);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Unlink Tag
+  const handleUnlink = async (uid: string) => {
+    if (!window.confirm(`Are you sure you want to unlink tag ${uid} from its associated item/student?`)) return;
+    try {
+      const res = await fetch(`${apiUrl}/rfid/unlink/${uid}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        fetchTags();
+      } else {
+        alert(data.error || 'Failed to unlink tag');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error unlinking tag');
+    }
+  };
+
   // Delete / Unregister Tag
   const handleDelete = async (uid: string) => {
     if (!window.confirm(`Are you sure you want to delete tag ${uid}? This clears all linked relationships.`)) return;
@@ -174,11 +252,14 @@ export const RFIDTags: React.FC = () => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         fetchTags();
+      } else {
+        alert(data.error || 'Failed to delete tag');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert(err.message || 'Error deleting tag');
     }
   };
 
@@ -186,7 +267,7 @@ export const RFIDTags: React.FC = () => {
     <div className="p-8 space-y-8 overflow-y-auto max-h-[calc(100vh-4rem)]">
       <div>
         <h1 className="text-2xl font-bold font-outfit text-white">RFID Tag Registry</h1>
-        <p className="text-slate-400 text-xs mt-1">Register new tags, assign RFID tags to books, and simulate scanner scans.</p>
+        <p className="text-slate-400 text-xs mt-1">Register new tags, edit UIDs, assign RFID tags to books, and simulate scanner scans.</p>
       </div>
 
       {/* Grid: Registration, Simulation Console */}
@@ -385,17 +466,38 @@ export const RFIDTags: React.FC = () => {
                     {(isLibrarian || isAdmin) && (
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end gap-2">
-                          {row.type === 'Book' && (
+                          <button
+                            onClick={() => openEditTagModal(row)}
+                            title="Edit RFID Tag UID"
+                            className="p-1.5 text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-600/20 rounded border border-emerald-500/20 transition-all flex items-center gap-1 text-xs font-semibold"
+                          >
+                            <Edit2 size={14} />
+                            <span>Edit UID</span>
+                          </button>
+
+                          {row.linked_id && (
+                            <button
+                              onClick={() => handleUnlink(row.uid)}
+                              title="Unlink from student/book"
+                              className="p-1.5 text-amber-400 hover:text-white bg-amber-500/10 hover:bg-amber-600/20 rounded border border-amber-500/20 transition-all text-xs font-semibold flex items-center gap-1"
+                            >
+                              <X size={14} />
+                              <span>Unlink</span>
+                            </button>
+                          )}
+
+                          {row.type === 'Book' && !row.linked_id && (
                             <button
                               onClick={() => openAssignModal(row)}
-                              title="Assign/Reassign to Book"
+                              title="Assign to Book"
                               className="p-1.5 text-indigo-400 hover:text-white bg-indigo-500/10 hover:bg-indigo-600/20 rounded border border-indigo-500/20 text-xs font-semibold flex items-center gap-1 transition-all"
                             >
                               <Link2 size={14} />
-                              <span>{row.linked_id ? 'Reassign' : 'Assign to Book'}</span>
+                              <span>Assign</span>
                             </button>
                           )}
-                          {isAdmin && (
+
+                          {(isAdmin || isLibrarian) && (
                             <button
                               onClick={() => handleDelete(row.uid)}
                               title="Delete Tag"
@@ -478,6 +580,82 @@ export const RFIDTags: React.FC = () => {
                 >
                   <Link2 size={14} />
                   <span>{assignLoading ? 'Assigning...' : 'Assign Tag to Book'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT RFID TAG MODAL */}
+      {showEditModal && selectedTag && (
+        <div className="fixed inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm z-50 p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="font-bold text-sm text-slate-100 font-outfit">Edit RFID Tag UID</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-500 hover:text-slate-300">
+                <X size={18} />
+              </button>
+            </div>
+            
+            {editError && (
+              <div className="p-4 mx-6 mt-4 rounded bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs">
+                {editError}
+              </div>
+            )}
+
+            {editSuccess && (
+              <div className="p-4 mx-6 mt-4 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs">
+                {editSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleEditTagSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-400 block mb-1">Current RFID Tag UID</label>
+                <div className="font-mono text-xs text-slate-400 bg-slate-950 px-3 py-2 rounded border border-slate-850">
+                  {selectedTag.uid}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-400 block mb-1">New Tag UID String</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter new UID string or hex..."
+                  value={editUid}
+                  onChange={(e) => setEditUid(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-400 block mb-1">Tag Type Usage</label>
+                <select
+                  value={editType}
+                  onChange={(e: any) => setEditType(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+                >
+                  <option value="Book">Book Copy Tag</option>
+                  <option value="Student">Student Card Tag</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-500/10 flex items-center gap-2"
+                >
+                  <span>{editLoading ? 'Saving...' : 'Save Tag Changes'}</span>
                 </button>
               </div>
             </form>

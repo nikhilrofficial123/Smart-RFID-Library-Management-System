@@ -136,10 +136,40 @@ export async function updateBook(req: AuthenticatedRequest, res: Response) {
       ]
     );
 
+    // Handle RFID tag linking or clearing on book update
+    if (req.body.rfid_uid !== undefined) {
+      const tagUid = String(req.body.rfid_uid || '').trim();
+      if (!tagUid || req.body.clear_rfid === true) {
+        await db.query('DELETE FROM RFIDTags WHERE type = "Book" AND linked_id = ?', [id]);
+      } else {
+        await db.query('INSERT OR REPLACE INTO RFIDTags (uid, type, linked_id, status) VALUES (?, "Book", ?, "Active")', [tagUid, id]);
+      }
+    }
+
     await logAudit(req.user?.id || 1, 'UPDATE_BOOK', 'Books', parseInt(id), `Updated book "${title || currentBook.title}"`, req.ip);
     res.json({ message: 'Book updated successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update book' });
+  }
+}
+
+// Unlink / Delete RFID tag from a book
+export async function unlinkBookRFID(req: AuthenticatedRequest, res: Response) {
+  const { id, uid } = req.params;
+  try {
+    const books = await db.query('SELECT title FROM Books WHERE id = ?', [id]);
+    if (books.length === 0) return res.status(404).json({ error: 'Book not found' });
+
+    if (uid) {
+      await db.query('DELETE FROM RFIDTags WHERE uid = ? AND type = "Book" AND linked_id = ?', [uid, id]);
+    } else {
+      await db.query('DELETE FROM RFIDTags WHERE type = "Book" AND linked_id = ?', [id]);
+    }
+
+    await logAudit(req.user?.id || 1, 'UNLINK_BOOK_RFID', 'Books', parseInt(id), `Unlinked RFID tag from book "${books[0].title}"`, req.ip);
+    res.json({ message: 'RFID tag unlinked from book successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to unlink RFID tag from book' });
   }
 }
 

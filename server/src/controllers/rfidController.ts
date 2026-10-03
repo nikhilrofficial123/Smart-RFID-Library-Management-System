@@ -86,6 +86,70 @@ export async function deleteRFIDTag(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+// Update / Rename RFID Tag UID string
+export async function updateRFIDTag(req: AuthenticatedRequest, res: Response) {
+  const { uid } = req.params;
+  const { newUid, type } = req.body;
+
+  if (!newUid || !newUid.trim()) {
+    return res.status(400).json({ error: 'New UID string is required' });
+  }
+
+  const cleanNewUid = newUid.trim();
+
+  try {
+    const existing = await db.query('SELECT * FROM RFIDTags WHERE uid = ?', [uid]);
+    if (existing.length === 0) return res.status(404).json({ error: 'RFID Tag not found' });
+
+    if (cleanNewUid !== uid) {
+      const duplicate = await db.query('SELECT uid FROM RFIDTags WHERE uid = ?', [cleanNewUid]);
+      if (duplicate.length > 0) return res.status(400).json({ error: 'Target RFID Tag UID already exists' });
+    }
+
+    const tag = existing[0];
+    const newType = type || tag.type;
+
+    // Update RFIDTags table
+    await db.query('UPDATE RFIDTags SET uid = ?, type = ? WHERE uid = ?', [cleanNewUid, newType, uid]);
+
+    // Update Students table if this UID was linked to a student
+    await db.query('UPDATE Students SET rfid_uid = ? WHERE rfid_uid = ?', [cleanNewUid, uid]);
+
+    // Update BookIssues table if this UID had active issues
+    await db.query('UPDATE BookIssues SET book_rfid_uid = ? WHERE book_rfid_uid = ?', [cleanNewUid, uid]);
+
+    await logAudit(req.user?.id || 1, 'UPDATE_TAG', 'RFIDTags', null, `Updated RFID tag UID from "${uid}" to "${cleanNewUid}"`, req.ip);
+
+    res.json({ message: 'RFID tag UID updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update RFID tag UID' });
+  }
+}
+
+// Unlink RFID Tag from its entity without deleting the tag
+export async function unlinkRFIDTag(req: AuthenticatedRequest, res: Response) {
+  const { uid } = req.params;
+  try {
+    const tags = await db.query('SELECT * FROM RFIDTags WHERE uid = ?', [uid]);
+    if (tags.length === 0) return res.status(404).json({ error: 'RFID Tag not found' });
+
+    const tag = tags[0];
+    if (tag.linked_id) {
+      if (tag.type === 'Student') {
+        await db.query('UPDATE Students SET rfid_uid = NULL WHERE id = ? OR rfid_uid = ?', [tag.linked_id, uid]);
+      }
+    }
+
+    await db.query('UPDATE RFIDTags SET linked_id = NULL WHERE uid = ?', [uid]);
+    await logAudit(req.user?.id || 1, 'UNLINK_TAG', 'RFIDTags', null, `Unlinked RFID tag "${uid}"`, req.ip);
+
+    res.json({ message: 'RFID tag unlinked successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to unlink RFID tag' });
+  }
+}
+
 // Simulate scanning a tag (useful for frontend simulator)
 export async function simulateScan(req: Request, res: Response) {
   const { uid } = req.body;

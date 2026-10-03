@@ -127,7 +127,7 @@ export const Books: React.FC = () => {
       category_id: categoryId ? parseInt(categoryId) : null,
       shelf_number: shelfNumber,
       total_copies: totalCopies,
-      image: image || `https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=150`,
+      image: image || `/assets/VERBS.jpg`,
       rfid_uid: rfidUid.trim() || undefined
     };
 
@@ -196,12 +196,55 @@ export const Books: React.FC = () => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         fetchBooks();
         fetchUnassignedTags();
+      } else {
+        alert(data.error || 'Failed to delete book');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert(err.message || 'Error deleting book');
+    }
+  };
+
+  const handleUnlinkBookRfid = async (bookId: number, tagUid: string, bookTitle: string) => {
+    if (!window.confirm(`Are you sure you want to delete/unlink RFID tag "${tagUid}" from book "${bookTitle}"?`)) return;
+    try {
+      const res = await fetch(`${apiUrl}/books/${bookId}/rfid/${tagUid}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        fetchBooks();
+        fetchUnassignedTags();
+      } else {
+        alert(data.error || 'Failed to unlink RFID tag');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error unlinking RFID tag');
+    }
+  };
+
+  const handleEditTagUidPrompt = async (oldUid: string) => {
+    const newUid = window.prompt(`Edit RFID Tag UID string (current: ${oldUid}):`, oldUid);
+    if (!newUid || !newUid.trim() || newUid.trim() === oldUid) return;
+    try {
+      const res = await fetch(`${apiUrl}/rfid/tags/${oldUid}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newUid: newUid.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update tag UID');
+      fetchBooks();
+      fetchUnassignedTags();
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -313,10 +356,10 @@ export const Books: React.FC = () => {
                     {/* Book image */}
                     <td className="py-4 px-6">
                       <img 
-                        src={row.image} 
+                        src={row.image || '/assets/VERBS.jpg'} 
                         alt={row.title} 
                         className="w-10 h-14 object-cover rounded shadow-md border border-slate-800"
-                        onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=150' }}
+                        onError={(e: any) => { e.target.src = '/assets/VERBS.jpg' }}
                       />
                     </td>
                     
@@ -348,7 +391,7 @@ export const Books: React.FC = () => {
                     
                     {/* RFID tags */}
                     <td className="py-4 px-6">
-                      <div className="flex flex-wrap items-center gap-1.5 max-w-[220px]">
+                      <div className="flex flex-wrap items-center gap-1.5 max-w-[240px]">
                         {row.rfid_tags.length === 0 ? (
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] text-slate-500 italic">No tag linked</span>
@@ -365,7 +408,27 @@ export const Books: React.FC = () => {
                         ) : (
                           <>
                             {row.rfid_tags.map((tag: string) => (
-                              <span key={tag} className="px-2 py-0.5 rounded bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-[10px] font-bold">{tag}</span>
+                              <div key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-[10px] font-bold">
+                                <span>{tag}</span>
+                                {isLibrarian && (
+                                  <div className="flex items-center gap-0.5 ml-1 border-l border-brand-500/20 pl-1">
+                                    <button
+                                      onClick={() => handleEditTagUidPrompt(tag)}
+                                      title="Edit Tag UID string"
+                                      className="hover:text-white p-0.5 rounded hover:bg-brand-500/20"
+                                    >
+                                      <Edit2 size={10} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleUnlinkBookRfid(row.id, tag, row.title)}
+                                      title="Delete/Unlink Tag from Book"
+                                      className="hover:text-rose-400 p-0.5 rounded hover:bg-rose-500/20"
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             ))}
                             {isLibrarian && (
                               <button
@@ -400,7 +463,7 @@ export const Books: React.FC = () => {
                           >
                             <Edit2 size={14} />
                           </button>
-                          {isAdmin && (
+                          {(isAdmin || isLibrarian) && (
                             <button
                               onClick={() => handleDelete(row.id)}
                               title="Delete Book"
@@ -493,13 +556,25 @@ export const Books: React.FC = () => {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">
-                    Assign RFID Tag UID <span className="text-brand-400 font-normal">(Scan card or type UID)</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-semibold text-slate-400 block">
+                      Assign / Edit RFID Tag UID <span className="text-brand-400 font-normal">(Scan card or type UID)</span>
+                    </label>
+                    {rfidUid && (
+                      <button
+                        type="button"
+                        onClick={() => setRfidUid('')}
+                        className="text-[10px] font-semibold text-rose-400 hover:underline flex items-center gap-1"
+                      >
+                        <X size={10} />
+                        <span>Clear/Remove Tag</span>
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Swipe RFID tag on RC522 reader or enter UID..."
+                      placeholder="Swipe RFID tag on RC522 reader or enter UID (leave blank to clear)..."
                       value={rfidUid}
                       onChange={(e) => setRfidUid(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-brand-500"

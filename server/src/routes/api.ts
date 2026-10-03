@@ -31,21 +31,25 @@ router.post('/books/categories', authenticateJWT, authorizeRoles('Admin', 'Libra
 router.get('/books/:id', authenticateJWT, books.getBookById);
 router.post('/books', authenticateJWT, authorizeRoles('Admin', 'Librarian'), books.createBook);
 router.put('/books/:id', authenticateJWT, authorizeRoles('Admin', 'Librarian'), books.updateBook);
-router.delete('/books/:id', authenticateJWT, authorizeRoles('Admin'), books.deleteBook);
+router.delete('/books/:id', authenticateJWT, authorizeRoles('Admin', 'Librarian'), books.deleteBook);
 router.post('/books/link-rfid', authenticateJWT, authorizeRoles('Admin', 'Librarian'), books.linkRFIDTag);
+router.delete('/books/:id/rfid/:uid?', authenticateJWT, authorizeRoles('Admin', 'Librarian'), books.unlinkBookRFID);
 
 // --- STUDENTS CRUD ---
 router.get('/students', authenticateJWT, students.getStudents);
 router.get('/students/:id', authenticateJWT, students.getStudentById);
 router.post('/students', authenticateJWT, authorizeRoles('Admin', 'Librarian'), students.createStudent);
 router.put('/students/:id', authenticateJWT, authorizeRoles('Admin', 'Librarian'), students.updateStudent);
-router.delete('/students/:id', authenticateJWT, authorizeRoles('Admin'), students.deleteStudent);
+router.delete('/students/:id/rfid', authenticateJWT, authorizeRoles('Admin', 'Librarian'), students.unlinkStudentRFID);
+router.delete('/students/:id', authenticateJWT, authorizeRoles('Admin', 'Librarian'), students.deleteStudent);
 
 // --- RFID MANAGEMENT ---
 router.get('/rfid/tags', authenticateJWT, rfid.getRFIDTags);
 router.post('/rfid/register', authenticateJWT, authorizeRoles('Admin', 'Librarian'), rfid.registerRFIDTag);
+router.put('/rfid/tags/:uid', authenticateJWT, authorizeRoles('Admin', 'Librarian'), rfid.updateRFIDTag);
+router.post('/rfid/unlink/:uid', authenticateJWT, authorizeRoles('Admin', 'Librarian'), rfid.unlinkRFIDTag);
 router.get('/rfid/check/:uid', checkRFIDTagAvailability); // Public helper endpoint
-router.delete('/rfid/:uid', authenticateJWT, authorizeRoles('Admin'), rfid.deleteRFIDTag);
+router.delete('/rfid/:uid', authenticateJWT, authorizeRoles('Admin', 'Librarian'), rfid.deleteRFIDTag);
 router.post('/rfid/simulate-scan', rfid.simulateScan); // Used by mock web UI scanner
 
 // --- TRANSACTIONS (ISSUE & RETURN) ---

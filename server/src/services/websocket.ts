@@ -2,17 +2,28 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import * as db from '../config/db';
 
+import { SerialPort } from 'serialport';
+import { ReadlineParser } from '@serialport/parser-readline';
+
 interface ClientConnection {
   ws: WebSocket;
   type: 'client' | 'middleware';
   isHardwareConnected?: boolean;
+  lastSeen: number;
 }
 
 let clients: ClientConnection[] = [];
 let isReaderOnline = false;
+let hardwareMonitorInterval: NodeJS.Timeout | null = null;
+let directSerialPort: SerialPort | null = null;
+let isDirectSerialConnected = false;
 
 function reevaluateReaderStatus() {
-  const hardwareOnline = clients.some(c => c.type === 'middleware' && c.isHardwareConnected === true);
+  const middlewareOnline = clients.some(
+    c => c.type === 'middleware' && c.isHardwareConnected === true && (Date.now() - c.lastSeen < 6000)
+  );
+  const hardwareOnline = middlewareOnline || isDirectSerialConnected;
+
   if (isReaderOnline !== hardwareOnline) {
     isReaderOnline = hardwareOnline;
     broadcastReaderStatus();
@@ -24,7 +35,126 @@ function reevaluateReaderStatus() {
   }
 }
 
+async function autoConnectDirectSerial() {
+  if (directSerialPort && directSerialPort.isOpen) return;
+
+  try {
+    const ports = await SerialPort.list();
+    const target = ports.find(p => 
+      p.path.includes('usbmodem') || 
+      p.path.includes('usbserial') || 
+      p.path.includes('ttyACM') || 
+      (p.manufacturer && p.manufacturer.toLowerCase().includes('arduino'))
+    );
+
+    if (target) {
+      console.log(`🔌 Auto-connecting direct USB Serial Port: ${target.path}...`);
+      const port = new SerialPort({ path: target.path, baudRate: 9600, autoOpen: false });
+      const parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+
+      port.open((err) => {
+        if (err) {
+          isDirectSerialConnected = false;
+          reevaluateReaderStatus();
+          return;
+        }
+
+        console.log(`✅ Direct USB Serial Port ${target.path} connected successfully!`);
+        directSerialPort = port;
+        isDirectSerialConnected = true;
+        reevaluateReaderStatus();
+
+        parser.on('data', async (data: string) => {
+          const line = data.trim();
+          if (line.startsWith('STATUS:RC522_OK') || line.includes('MIFARE') || line.includes('Read personal data') || line.includes('PICC')) {
+            if (!isDirectSerialConnected) {
+              isDirectSerialConnected = true;
+              reevaluateReaderStatus();
+            }
+          } else if (line.startsWith('STATUS:RC522_ERROR')) {
+            if (isDirectSerialConnected) {
+              isDirectSerialConnected = false;
+              reevaluateReaderStatus();
+            }
+          } else if (line) {
+            isDirectSerialConnected = true;
+            reevaluateReaderStatus();
+
+            let cleanUid = line;
+            if (cleanUid.includes('Card UID:')) {
+              cleanUid = cleanUid.split('Card UID:')[1].trim();
+            }
+            if (!cleanUid.includes('_')) {
+              cleanUid = cleanUid.replace(/\s+/g, '').toUpperCase();
+            }
+            if (cleanUid.length >= 4) {
+              await handleRFIDScan(cleanUid);
+            }
+          }
+        });
+
+        port.on('error', (err) => {
+          console.error('Direct Serial Port Error:', err.message);
+          isDirectSerialConnected = false;
+          directSerialPort = null;
+          reevaluateReaderStatus();
+        });
+
+        port.on('close', () => {
+          console.log('Direct Serial Port Closed.');
+          isDirectSerialConnected = false;
+          directSerialPort = null;
+          reevaluateReaderStatus();
+        });
+      });
+    }
+  } catch (err) {
+    // Fallback if serial port search error occurs
+  }
+}
+
+// Start continuous hardware connection check interval
+function startHardwareMonitor() {
+  if (hardwareMonitorInterval) return;
+  
+  // Trigger initial direct serial port check
+  autoConnectDirectSerial();
+
+  hardwareMonitorInterval = setInterval(() => {
+    const now = Date.now();
+    let statusChanged = false;
+
+    // Check direct serial port status
+    if (!directSerialPort || !directSerialPort.isOpen) {
+      if (isDirectSerialConnected) {
+        isDirectSerialConnected = false;
+        statusChanged = true;
+      }
+      autoConnectDirectSerial();
+    } else {
+      try {
+        directSerialPort.write('CHECK\n');
+      } catch (_) {}
+    }
+
+    // Check middleware WebSocket connections
+    clients.forEach(client => {
+      if (client.type === 'middleware') {
+        if (now - client.lastSeen > 6000 && client.isHardwareConnected) {
+          client.isHardwareConnected = false;
+          statusChanged = true;
+        }
+      }
+    });
+
+    if (statusChanged) {
+      reevaluateReaderStatus();
+    }
+  }, 2500);
+}
+
 export function initWebSocket(server: Server) {
+  startHardwareMonitor();
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (request, socket, head) => {
@@ -47,7 +177,7 @@ export function initWebSocket(server: Server) {
         : 'client';
     
     console.log(`New WS connection established. Type: ${connType}`);
-    const connInfo: ClientConnection = { ws, type: connType, isHardwareConnected: false };
+    const connInfo: ClientConnection = { ws, type: connType, isHardwareConnected: false, lastSeen: Date.now() };
     clients.push(connInfo);
 
     if (connType === 'middleware') {
@@ -59,8 +189,13 @@ export function initWebSocket(server: Server) {
 
     ws.on('message', async (message: string) => {
       try {
+        connInfo.lastSeen = Date.now();
         const data = JSON.parse(message);
-        console.log('WS Message received:', data);
+
+        if (data.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', online: isReaderOnline }));
+          return;
+        }
 
         if (connType === 'middleware') {
           if (data.type === 'hardware-status') {

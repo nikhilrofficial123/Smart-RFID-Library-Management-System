@@ -93,6 +93,7 @@ export const Students: React.FC = () => {
       mobile,
       email,
       status,
+      rfid_uid: rfidUid ? rfidUid.trim() : null,
       photo: photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${rollNumber}`
     };
 
@@ -160,11 +161,32 @@ export const Students: React.FC = () => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         fetchStudents();
+      } else {
+        alert(data.error || 'Failed to delete student');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert(err.message || 'Error deleting student');
+    }
+  };
+
+  const handleUnlinkRfid = async (studentId: number, studentName: string) => {
+    if (!window.confirm(`Are you sure you want to delete/unlink the RFID card from student "${studentName}"?`)) return;
+    try {
+      const res = await fetch(`${apiUrl}/students/${studentId}/rfid`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        fetchStudents();
+      } else {
+        alert(data.error || 'Failed to unlink RFID card');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error unlinking RFID card');
     }
   };
 
@@ -178,12 +200,13 @@ export const Students: React.FC = () => {
     setEmail(student.email);
     setPhoto(student.photo || '');
     setStatus(student.status);
+    setRfidUid(student.rfid_uid || '');
     setShowFormModal(true);
   };
 
   const openLinkModal = (student: any) => {
     setSelectedStudent(student);
-    setRfidUid('');
+    setRfidUid(student.rfid_uid || '');
     setLinkError('');
     setShowLinkModal(true);
   };
@@ -198,6 +221,7 @@ export const Students: React.FC = () => {
     setEmail('');
     setPhoto('');
     setStatus('Active');
+    setRfidUid('');
     setError('');
   };
 
@@ -288,9 +312,40 @@ export const Students: React.FC = () => {
                     {/* RFID Card ID */}
                     <td className="py-4 px-6 font-mono">
                       {row.rfid_uid ? (
-                        <span className="px-2.5 py-1 bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-md font-bold">{row.rfid_uid}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2.5 py-1 bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-md font-bold">{row.rfid_uid}</span>
+                          {isLibrarian && (
+                            <>
+                              <button
+                                onClick={() => openLinkModal(row)}
+                                title="Edit/Re-scan RFID Card"
+                                className="p-1 text-slate-400 hover:text-brand-400 bg-slate-800/80 hover:bg-slate-800 rounded border border-slate-700/50 transition-all"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleUnlinkRfid(row.id, row.name)}
+                                title="Delete/Unlink RFID Card"
+                                className="p-1 text-slate-400 hover:text-rose-400 bg-slate-800/80 hover:bg-rose-500/10 rounded border border-slate-700/50 transition-all"
+                              >
+                                <X size={12} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       ) : (
-                        <span className="text-[10px] text-slate-500 italic">Unassigned Card</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 italic">Unassigned Card</span>
+                          {isLibrarian && (
+                            <button
+                              onClick={() => openLinkModal(row)}
+                              className="px-2 py-0.5 bg-indigo-500/10 hover:bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 rounded text-[10px] font-semibold flex items-center gap-1 transition-all"
+                            >
+                              <Plus size={10} />
+                              <span>Assign Card</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                     
@@ -323,7 +378,7 @@ export const Students: React.FC = () => {
                           >
                             <Edit2 size={14} />
                           </button>
-                          {isAdmin && (
+                          {(isAdmin || isLibrarian) && (
                             <button
                               onClick={() => handleDelete(row.id)}
                               title="Remove Student"
@@ -425,6 +480,31 @@ export const Students: React.FC = () => {
                     <option value="Active">Active</option>
                     <option value="Suspended">Suspended</option>
                   </select>
+                </div>
+
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-semibold text-slate-400 block">
+                      Assigned RFID Card UID <span className="text-brand-400 font-normal">(Editable)</span>
+                    </label>
+                    {rfidUid && (
+                      <button
+                        type="button"
+                        onClick={() => setRfidUid('')}
+                        className="text-[10px] font-semibold text-rose-400 hover:underline flex items-center gap-1"
+                      >
+                        <X size={10} />
+                        <span>Clear/Remove Card</span>
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Scan card or type UID (leave blank to clear)..."
+                    value={rfidUid}
+                    onChange={(e) => setRfidUid(e.target.value)}
+                    className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-brand-500"
+                  />
                 </div>
 
                 <div>

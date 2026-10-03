@@ -391,10 +391,10 @@ export const IssueReturn: React.FC = () => {
             ) : (
               <div className="flex flex-col md:flex-row gap-6 p-4 bg-slate-950/40 border border-slate-850 rounded-xl animate-in fade-in duration-200">
                 <img 
-                  src={scannedBook.image} 
+                  src={scannedBook.image || '/assets/VERBS.jpg'} 
                   alt="Book Cover" 
                   className="w-18 h-26 object-cover rounded shadow-md border border-slate-850 self-center"
-                  onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=150' }}
+                  onError={(e: any) => { e.target.src = '/assets/VERBS.jpg' }}
                 />
                 <div className="space-y-2 text-xs flex-1">
                   <div>

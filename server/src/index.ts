@@ -6,6 +6,8 @@ import apiRouter from './routes/api';
 import { initDatabase } from './config/db';
 import { initWebSocket } from './services/websocket';
 
+import path from 'path';
+
 dotenv.config();
 
 const app = express();
@@ -16,6 +18,11 @@ const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin })); // Set CORS_ORIGIN env var in production
 
 app.use(express.json({ limit: '10mb' })); // Support uploads in JSON bodies
+
+// Serve static assets
+app.use('/assets', express.static(path.join(__dirname, '../../client/public/assets')));
+app.use('/assets', express.static(path.join(__dirname, '../../client/src/assets')));
+app.use(express.static(path.join(__dirname, '../../client/public')));
 
 // Register Router
 app.use('/api', apiRouter);

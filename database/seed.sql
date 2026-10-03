@@ -23,31 +23,33 @@ INSERT INTO Books (id, title, author, isbn, category_id, shelf_number, image, to
 (2, 'Clean Code', 'Robert C. Martin', '9780132350884', 1, 'Shelf A-2', 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=300', 3, 3),
 (3, 'Design Patterns', 'Erich Gamma', '9780201633610', 1, 'Shelf A-3', 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=300', 4, 3),
 (4, 'Linear Algebra and Its Applications', 'Gilbert Strang', '9780030105678', 2, 'Shelf B-1', 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=300', 2, 2),
-(5, 'Introduction to Electrodynamics', 'David J. Griffiths', '9780138053260', 3, 'Shelf C-1', 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=300', 2, 1),
+(5, 'VERBS', 'S.S.BANGALE', '2046709057', 4, 'Shelf A-1', '/assets/VERBS.jpg', 8, 8),
 (6, 'Microelectronic Circuits', 'Adel S. Sedra', '9780199339136', 5, 'Shelf D-2', 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=300', 3, 3);
 
 -- Insert Sample Students
 INSERT INTO Students (id, roll_number, name, rfid_uid, department, year, mobile, email, photo, status) VALUES
-(1, 'CS2023001', 'Rahul Sharma', 'STU_CARD_779213', 'Computer Science', '3rd Year', '9876543210', 'rahul.sharma@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=rahul', 'Active'),
-(2, 'CS2023045', 'Priya Patel', 'STU_CARD_882312', 'Computer Science', '3rd Year', '9876543211', 'priya.patel@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=priya', 'Active'),
-(3, 'EE2022012', 'Amit Verma', 'STU_CARD_991204', 'Electrical Engineering', '4th Year', '9876543212', 'amit.verma@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=amit', 'Active'),
-(4, 'ME2024009', 'Siddharth Rao', 'STU_CARD_445210', 'Mechanical Engineering', '2nd Year', '9876543213', 'sid.rao@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=sid', 'Active'),
-(5, 'CS2023089', 'Anjali Gupta', 'STU_CARD_558712', 'Computer Science', '3rd Year', '9876543214', 'anjali.gupta@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=anjali', 'Suspended');
+(1, '202256108016', 'Nikhil Roule', '535', 'CSE', '4th Year', '9876543210', 'nikhil.roule@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=nikhil', 'Active'),
+(2, '2023600014', 'Gaurav Patil', 'STU_CARD_882312', 'CSE', '3rd Year', '9876543211', 'gaurav.patil@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=gaurav', 'Active'),
+(3, '20236000012', 'Vaishnavi Kale', 'STU_CARD_991204', 'CSE', '4th Year', '9876543212', 'vaishnavikale@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=vaishnavi', 'Active'),
+(4, '20223860002', 'Tushar Nalawade', NULL, 'CSE', '4th Year', '78537645755', 'tusharnalawade@gmail.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=tushar', 'Active'),
+(5, 'EE2022012', 'Amit Verma', 'STU_CARD_991205', 'Electrical Engineering', '4th Year', '9876543212', 'amit.verma@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=amit', 'Active'),
+(6, 'ME2024009', 'Siddharth Rao', 'STU_CARD_445210', 'Mechanical Engineering', '2nd Year', '9876543213', 'sid.rao@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=sid', 'Active'),
+(7, 'CS2023089', 'Anjali Gupta', 'STU_CARD_558712', 'Computer Science', '3rd Year', '9876543214', 'anjali.gupta@student.edu', 'https://api.dicebear.com/7.x/avataaars/svg?seed=anjali', 'Suspended');
 
 -- Insert RFID Tag Mapping
 INSERT INTO RFIDTags (uid, status, type, linked_id) VALUES
-('STU_CARD_779213', 'Active', 'Student', 1),
+('535', 'Active', 'Student', 1),
 ('STU_CARD_882312', 'Active', 'Student', 2),
 ('STU_CARD_991204', 'Active', 'Student', 3),
-('STU_CARD_445210', 'Active', 'Student', 4),
-('STU_CARD_558712', 'Active', 'Student', 5),
--- Books tags
+('STU_CARD_991205', 'Active', 'Student', 5),
+('STU_CARD_445210', 'Active', 'Student', 6),
+('STU_CARD_558712', 'Active', 'Student', 7),
 ('BOOK_TAG_1001A', 'Active', 'Book', 1),
-('BOOK_TAG_1006A', 'Active', 'Book', 6),
 ('BOOK_TAG_1002A', 'Active', 'Book', 2),
 ('BOOK_TAG_1003A', 'Active', 'Book', 3),
 ('BOOK_TAG_1004A', 'Active', 'Book', 4),
-('BOOK_TAG_1005A', 'Active', 'Book', 5);
+('BOOK_TAG_1005A', 'Active', 'Book', 5),
+('BOOK_TAG_1006A', 'Active', 'Book', 6);
 
 -- Insert Sample Book Issues
 -- Format: Expected return is 14 days after issue.
